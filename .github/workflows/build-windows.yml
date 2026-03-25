@@ -1,0 +1,48 @@
+name: Build Windows exe
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install package + PyInstaller
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pyinstaller
+
+      - name: Create entry script
+        run: |
+          echo from dj_bpm_tool.cli import main> run_dj_bpm.py
+          echo.>> run_dj_bpm.py
+          echo if __name__ == "__main__":>> run_dj_bpm.py
+          echo     main()>> run_dj_bpm.py
+
+      - name: Build exe
+        run: |
+          pyinstaller --clean --noconfirm --name dj-bpm --onefile -c -p src run_dj_bpm.py
+
+      - name: Package zip
+        run: |
+          mkdir release
+          powershell -Command "Compress-Archive -Path dist\\dj-bpm.exe -DestinationPath release\\dj-bpm-windows.zip"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dj-bpm-windows
+          path: release/dj-bpm-windows.zip
