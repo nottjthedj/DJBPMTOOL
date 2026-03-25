@@ -1,0 +1,13 @@
+dj-bpm-tool (macOS)
+
+1) Open Terminal
+2) cd into the folder where you downloaded this
+3) Run:
+   chmod +x dj-bpm
+   ./dj-bpm --help
+
+Example:
+   ./dj-bpm stats --input ~/master_indian_merged_int.csv
+
+Notes:
+- If macOS blocks it, go to System Settings -> Privacy & Security and allow it.

@@ -1,0 +1,2 @@
+[console_scripts]
+dj-bpm = dj_bpm_tool.cli:main

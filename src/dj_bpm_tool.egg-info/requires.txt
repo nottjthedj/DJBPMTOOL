@@ -1,0 +1,2 @@
+mutagen>=1.47.0
+serato-tools>=0.1.0
