@@ -1,13 +1,22 @@
 import argparse
 import csv
+import json
 import os
 import sys
-import json
+from pathlib import Path
 
 from .core import extract_bpm_from_mp3
 from .merge import merge_bpm_into_master
 from .normalize import normalize_bpm_csv
 from .stats import bpm_stats_from_csv
+from .crate_match import match_playlist_to_library
+from .crate_export import write_reports
+from .serato_crate import write_serato_crate_interactive
+
+
+# ---------------------------------------------------------------------------
+# BPM commands (original 4)
+# ---------------------------------------------------------------------------
 
 def cmd_scan(args: argparse.Namespace) -> int:
     root = os.path.expanduser(args.music)
@@ -32,6 +41,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
     print(f"Wrote {rows} rows -> {out}")
     return 0
 
+
 def cmd_merge(args: argparse.Namespace) -> int:
     master = os.path.expanduser(args.master)
     bpmcsv = os.path.expanduser(args.bpm_csv)
@@ -42,6 +52,7 @@ def cmd_merge(args: argparse.Namespace) -> int:
     print("Stats:", stats)
     return 0
 
+
 def cmd_normalize(args: argparse.Namespace) -> int:
     inp = os.path.expanduser(args.input)
     out = os.path.expanduser(args.out)
@@ -51,6 +62,7 @@ def cmd_normalize(args: argparse.Namespace) -> int:
     print(f"Wrote normalized CSV -> {out}")
     print("Stats:", stats)
     return 0
+
 
 def cmd_stats(args: argparse.Namespace) -> int:
     inp = os.path.expanduser(args.input)
@@ -95,37 +107,130 @@ def cmd_stats(args: argparse.Namespace) -> int:
 
     return 0
 
+
+# ---------------------------------------------------------------------------
+# Crate command
+# ---------------------------------------------------------------------------
+
+def cmd_crate_from_csv(args: argparse.Namespace) -> int:
+    results, stats = match_playlist_to_library(
+        library_csv=args.library,
+        playlist_csv=args.playlist,
+        min_score=args.min_score,
+        ambiguous_margin=args.ambiguous_margin,
+        require_file_exists=not args.allow_missing_files,
+        verbose=args.verbose,
+    )
+
+    print(
+        f"playlist_rows={stats['playlist_rows']}  "
+        f"matched={stats['matched']}  "
+        f"missing={stats['missing']}  "
+        f"ambiguous={stats['ambiguous']}"
+    )
+
+    if args.dry_run:
+        print("dry-run: not writing outputs")
+        return 0
+
+    out = write_reports(results, out_dir=args.output, crate_name=args.name)
+
+    matched_paths = [r.file_path for r in results if r.status == "matched" and r.file_path]
+
+    crate_path = write_serato_crate_interactive(
+        matched_paths,
+        crate_name=args.name,
+        template_path=args.template_crate,
+    )
+
+    print("wrote:")
+    for k, v in out.items():
+        print(f"  {k}: {v}")
+    print(f"  serato_crate: {crate_path}")
+
+    return 0
+
+
+# ---------------------------------------------------------------------------
+# Parser
+# ---------------------------------------------------------------------------
+
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="dj-bpm", description="DJ BPM extractor + CSV tools (MP3 only)")
+    p = argparse.ArgumentParser(
+        prog="dj-bpm",
+        description="DJ BPM extractor + CSV tools + Serato crate builder",
+    )
     sub = p.add_subparsers(dest="command", required=True)
 
+    # scan
     scan = sub.add_parser("scan", help="Scan a folder of MP3s and export BPM CSV")
     scan.add_argument("--music", required=True, help="Root folder to scan (e.g., ~/Music)")
     scan.add_argument("--out", required=True, help="Output CSV path (e.g., ~/bpm_export.csv)")
     scan.add_argument("--progress", action="store_true", help="Print progress every 1000 files")
     scan.set_defaults(func=cmd_scan)
 
-    merge = sub.add_parser("merge", help="Merge BPM CSV into a master CSV by full FilePath (fill blank BPM only)")
+    # merge
+    merge = sub.add_parser(
+        "merge",
+        help="Merge BPM CSV into a master CSV by full FilePath (fill blank BPM only)",
+    )
     merge.add_argument("--master", required=True, help="Master CSV path (must have FilePath and BPM columns)")
     merge.add_argument("--bpm-csv", dest="bpm_csv", required=True, help="BPM export CSV path (FilePath,BPM)")
     merge.add_argument("--out", required=True, help="Output merged CSV path")
     merge.set_defaults(func=cmd_merge)
 
+    # normalize
     norm = sub.add_parser("normalize", help="Normalize BPM values in a CSV (round/floor/ceil/keep1/keep2)")
     norm.add_argument("--input", required=True, help="Input CSV path (must have BPM column)")
     norm.add_argument("--out", required=True, help="Output CSV path")
     norm.add_argument("--mode", default="round", help="round|floor|ceil|keep1|keep2 (default: round)")
     norm.set_defaults(func=cmd_normalize)
 
+    # stats
     st = sub.add_parser("stats", help="Summarize BPM coverage and distribution for a CSV")
     st.add_argument("--input", required=True, help="Input CSV path (must have BPM column)")
     st.add_argument("--bucket-size", type=int, default=10, help="Histogram bucket size (default: 10)")
     st.add_argument("--json", action="store_true", help="Print raw JSON stats")
     st.set_defaults(func=cmd_stats)
 
+    # crate-from-csv
+    crate = sub.add_parser(
+        "crate-from-csv",
+        help="Match a playlist CSV to your library, write reports + a Serato .crate file",
+    )
+    crate.add_argument("--library", required=True,
+                       help="Master library CSV (needs FilePath/SourceFile, Artist, Title columns)")
+    crate.add_argument("--playlist", required=True,
+                       help="Playlist CSV (needs Artist and Title columns)")
+    crate.add_argument("--output", required=True,
+                       help="Output folder for audit/missing/ambiguous CSVs + M3U")
+    crate.add_argument("--name", required=True,
+                       help="Crate name (no .crate extension) — also used as M3U filename")
+    crate.add_argument("--min-score", type=int, default=88,
+                       help="Minimum fuzzy match score 0-100 (default: 88)")
+    crate.add_argument("--ambiguous-margin", type=int, default=4,
+                       help="If top-score minus second-score < margin, mark ambiguous (default: 4)")
+    crate.add_argument("--allow-missing-files", action="store_true",
+                       help="Skip disk-existence check for matched FilePaths")
+    crate.add_argument("--dry-run", action="store_true",
+                       help="Compute matches and print stats but don't write any files")
+    crate.add_argument("--verbose", action="store_true",
+                       help="Print per-track match scores to stderr")
+    crate.add_argument(
+        "--template-crate",
+        default=str(Path.home() / "Music" / "_Serato_" / "Subcrates" / "Disco.crate"),
+        help="Path to an existing .crate used as the header template (default: ~/Music/_Serato_/Subcrates/Disco.crate)",
+    )
+    crate.set_defaults(func=cmd_crate_from_csv)
+
     return p
 
-def main() -> None:
+
+def main(argv=None) -> None:
     parser = build_parser()
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     raise SystemExit(args.func(args))
+
+
+if __name__ == "__main__":
+    main()
