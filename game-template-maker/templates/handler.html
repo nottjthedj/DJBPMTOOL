@@ -115,6 +115,16 @@
   .livebar .btn.on{background:linear-gradient(135deg,#ff3b3b,#ff2d2d);box-shadow:0 6px 22px rgba(255,45,45,.4);}
   .livestat{font-size:12px;color:var(--dim);line-height:1.4;}
   .livestat b{color:var(--primary-bright);}
+  textarea.sel{min-height:96px;resize:vertical;font-family:inherit;line-height:1.5;}
+  .tally{display:grid;gap:9px;}
+  .tbar{border:1px solid var(--line);border-radius:12px;padding:10px 12px;position:relative;overflow:hidden;background:rgba(255,255,255,.02);}
+  .tbar .fill{position:absolute;inset:0;width:0;background:linear-gradient(90deg,rgba({{colors.primaryRgb}},.28),rgba({{colors.primaryRgb}},.08));transition:width .5s ease;z-index:0;}
+  .tbar.lead .fill{background:linear-gradient(90deg,rgba({{colors.secondaryRgb}},.32),rgba({{colors.secondaryRgb}},.08));}
+  .tbar .row{position:relative;z-index:1;display:flex;justify-content:space-between;align-items:center;}
+  .tbar .lbl{font-weight:800;font-size:15px;}
+  .tbar.lead .lbl{color:var(--secondary);}
+  .tbar .n{font-family:"IBM Plex Mono",Consolas,monospace;font-size:14px;color:var(--dim);}
+  .tbar.lead .n{color:var(--secondary);}
   .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:50;
     background:rgba({{colors.bgRgb}},.95);border:1px solid var(--line);color:#fff;padding:11px 18px;
     border-radius:999px;font-size:13px;font-weight:700;opacity:0;transition:opacity .25s;pointer-events:none;}
@@ -137,6 +147,7 @@
     <div class="tabs">
       <button data-tab="show" class="active">Show</button>
       <button data-tab="missions">Missions</button>
+      <button data-tab="poll">Poll</button>
       <button data-tab="crew">Crew Link</button>
     </div>
   </header>
@@ -164,6 +175,22 @@
     <div class="recipes" id="recipes"></div>
     <div class="counter"><b id="selCount">0</b> / 3 selected — tap a mission to expand the how-to</div>
     <div id="missionList"></div>
+  </div>
+
+  <!-- ===== POLL ===== -->
+  <div class="panel" id="poll">
+    <div class="h">Live poll — every phone is a buzzer</div>
+    <div class="recipes" id="pollTemplates"></div>
+    <div class="field"><label>Question</label><input class="sel" id="pollQ" autocomplete="off" placeholder="Who's the Most Wanted?" /></div>
+    <div class="field"><label>Options — one per line</label>
+      <textarea class="sel" id="pollOpts" placeholder="Suspect 1&#10;Suspect 2&#10;Suspect 3"></textarea></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn" id="openPoll">▶ Open poll (go live)</button>
+      <button class="btn ghost" id="closePoll">■ Close &amp; reveal winner</button>
+      <button class="btn ghost" id="clearPoll">Clear</button>
+    </div>
+    <div class="h">Live tally</div>
+    <div class="tally" id="tally"><div class="livestat">Open a poll and votes roll in here in real time.</div></div>
   </div>
 
   <!-- ===== CREW LINK ===== -->
@@ -215,6 +242,7 @@
   var chapters=SHOW.chapters||[], missions=SHOW.missions||[];
   var picked=[]; // mission ids
   var heat=1, chapterNo=1;
+  var currentPoll=null;   // {id,q,options,open,winner}
   var PREFIX="{{web.storagePrefix}}";
   function slugEvent(s){ return (String(s||'main').toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40))||'main'; }
   var eventKey=slugEvent(localStorage.getItem(PREFIX+'_event')||'main');
@@ -246,7 +274,7 @@
   }
   function pushState(extra){
     if(!ensureToken()){ toast('Passcode needed to go live'); return; }
-    var payload={event:eventKey,chapter:chapterNo,heat:heat,missions:picked,live:live};
+    var payload={event:eventKey,chapter:chapterNo,heat:heat,missions:picked,poll:currentPoll,live:live};
     if(extra) for(var k in extra) payload[k]=extra[k];
     fetch('/api/show-state',{method:'POST',headers:{'Content-Type':'application/json','x-gallery-token':TOKEN},body:JSON.stringify(payload)})
       .then(function(r){
@@ -374,6 +402,77 @@
     if(prevLive && eventKey!==prevKey){ pushState({event:prevKey,live:false}); pushState(); }
   };
 
+  // ---- live poll ----
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+  var POLL_TEMPLATES=[
+    {name:'Most Wanted', q:"Who's the Most Wanted?", opts:['Suspect 1','Suspect 2','Suspect 3','Suspect 4','Suspect 5']},
+    {name:'Find the Rat', q:"Who's the rat?", opts:['Crew 1','Crew 2','Crew 3','Crew 4','Crew 5']},
+    {name:'Best Crew', q:'Which crew runs this town?', opts:['Left side','Right side']},
+    {name:'Pull the job?', q:'Do we pull the job tonight?', opts:['Pull it','Bail']}
+  ];
+  function fillPollTemplates(){
+    var w=$('pollTemplates'); w.innerHTML='';
+    POLL_TEMPLATES.forEach(function(t){
+      var b=document.createElement('button'); b.textContent=t.name;
+      b.onclick=function(){ $('pollQ').value=t.q; $('pollOpts').value=t.opts.join('\n'); };
+      w.appendChild(b);
+    });
+  }
+  function optionsFromText(){
+    return $('pollOpts').value.split('\n').map(function(l){return l.trim();}).filter(Boolean).slice(0,8)
+      .map(function(lbl,i){ return {id:(lbl.toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,24)||('opt'+(i+1))), label:lbl}; });
+  }
+  var tallyTimer=null;
+  function openPoll(){
+    var opts=optionsFromText();
+    if(opts.length<2){ toast('Add at least two options'); return; }
+    var seen={}; opts.forEach(function(o,i){ if(seen[o.id]) o.id=o.id+'-'+(i+1); seen[o.id]=1; });
+    currentPoll={ id:'p'+Date.now(), q:$('pollQ').value.trim()||'Cast your vote', options:opts, open:true, winner:null };
+    live=true; paintLive(); pushState();
+    toast('Poll live — phones are buzzing'); startTally();
+  }
+  function startTally(){ stopTally(); pollTally(); tallyTimer=setInterval(pollTally,2500); }
+  function stopTally(){ if(tallyTimer){ clearInterval(tallyTimer); tallyTimer=null; } }
+  function pollTally(){
+    if(!currentPoll) return;
+    fetch('/api/vote?event='+encodeURIComponent(eventKey)+'&poll='+encodeURIComponent(currentPoll.id))
+      .then(function(r){ return r.ok?r.json():null; })
+      .then(function(d){ if(d) renderTally(d.counts||{}, d.total||0); }).catch(function(){});
+  }
+  function renderTally(counts, total){
+    if(!currentPoll) return;
+    var wrap=$('tally'), max=0;
+    currentPoll.options.forEach(function(o){ max=Math.max(max, counts[o.id]||0); });
+    wrap.innerHTML='';
+    currentPoll.options.forEach(function(o){
+      var n=counts[o.id]||0, lead=(max>0 && n===max), pct=(max>0?Math.round(n/max*100):0);
+      var el=document.createElement('div'); el.className='tbar'+(lead?' lead':'');
+      el.innerHTML='<div class="fill" style="width:'+pct+'%"></div><div class="row"><span class="lbl">'+
+        esc(o.label)+(!currentPoll.open&&currentPoll.winner===o.id?' ★':'')+'</span><span class="n">'+n+'</span></div>';
+      wrap.appendChild(el);
+    });
+    var note=document.createElement('div'); note.className='livestat'; note.style.marginTop='6px';
+    note.textContent=(currentPoll.open?'Live — ':'Closed — ')+total+' vote'+(total===1?'':'s');
+    wrap.appendChild(note);
+  }
+  function closePoll(){
+    if(!currentPoll){ toast('No poll open'); return; }
+    fetch('/api/vote?event='+encodeURIComponent(eventKey)+'&poll='+encodeURIComponent(currentPoll.id))
+      .then(function(r){ return r.ok?r.json():{counts:{},total:0}; }).then(function(d){
+        var counts=d.counts||{}, max=-1, win=null;
+        currentPoll.options.forEach(function(o){ var n=counts[o.id]||0; if(n>max){max=n;win=o.id;} });
+        currentPoll.open=false; currentPoll.winner=win;
+        pushState(); renderTally(counts, d.total||0); stopTally();
+        toast('Winner locked — pushed to the crew');
+      }).catch(function(){ toast('Couldn’t close'); });
+  }
+  function clearPoll(){
+    currentPoll=null; pushState(); stopTally();
+    $('tally').innerHTML='<div class="livestat">Open a poll and votes roll in here in real time.</div>';
+  }
+  $('openPoll').onclick=openPoll; $('closePoll').onclick=closePoll; $('clearPoll').onclick=clearPoll;
+
   // ---- go live ----
   $('goLive').onclick=function(){
     live=!live; paintLive();
@@ -381,7 +480,7 @@
   };
 
   // ---- init ----
-  fillChapters(); renderChapter(); recipeButtons();
+  fillChapters(); renderChapter(); recipeButtons(); fillPollTemplates();
   picked=((SHOW.rotation||{}).firstNight||[]).slice(0,3);
   renderMissions(); starButtons(); syncCrew(); paintLive();
 })();

@@ -193,6 +193,13 @@ config = the whole system, re-skinned. Expand infinitely.
     in the console (e.g. `chicago`, `detroit`); its crew QR carries `?e=<key>` and only
     that room follows it. Multiple shows run simultaneously without colliding. A bare
     `crew.html` (no `?e`) follows the default `main` channel, so single-room stays simple.
+- **Live crowd voting — every phone is a buzzer.** In the console's **Poll** tab, pick a
+  template (Most Wanted, Find the Rat, Best Crew, Pull the job?) or write your own, tap
+  **Open poll** → every crew phone shows the question and buttons; the tally rolls in live
+  and **Close & reveal** pushes the winner back to the room. Votes are anonymous, one per
+  member. A vote is a single tiny object whose *key* holds the option, so the whole room
+  tallies with one list call — no per-vote reads. `POST /api/vote` casts; `GET /api/vote`
+  tallies; no new config (same B2).
 - The booth's own backend (Backblaze B2 + NAS) is unchanged and documented in the
   generated `SETUP.md`.
 ```

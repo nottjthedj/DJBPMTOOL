@@ -29,3 +29,7 @@
   from = "/api/show-state"
   to = "/.netlify/functions/show-state"
   status = 200
+[[redirects]]
+  from = "/api/vote"
+  to = "/.netlify/functions/vote"
+  status = 200

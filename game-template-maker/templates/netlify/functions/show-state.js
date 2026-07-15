@@ -42,7 +42,24 @@ exports.handler = async (event) => {
       ? body.missions.map(n => parseInt(n, 10)).filter(n => !isNaN(n)).slice(0, 6)
       : [];
     const key = eventKey(body.event);
-    const state = { event: key.slice(6, -5), chapter, heat, missions, live: body.live !== false, updatedAt: new Date().toISOString() };
+    // Optional live poll: { id, q, options:[{id,label}], open:Bool, winner:id|null }
+    let poll = null;
+    if (body.poll && typeof body.poll === 'object') {
+      const p = body.poll;
+      const opts = Array.isArray(p.options) ? p.options.slice(0, 8).map(o => ({
+        id: String(o.id || '').toLowerCase().replace(/[^a-z0-9-]+/g, '-').slice(0, 24),
+        label: String(o.label || o.id || '').slice(0, 60),
+      })).filter(o => o.id) : [];
+      poll = {
+        id: String(p.id || '').replace(/[^a-z0-9-]+/gi, '-').slice(0, 40),
+        q: String(p.q || '').slice(0, 120),
+        options: opts,
+        open: p.open !== false,
+        winner: p.winner ? String(p.winner).toLowerCase().replace(/[^a-z0-9-]+/g, '-').slice(0, 24) : null,
+      };
+      if (!poll.id || !opts.length) poll = null;
+    }
+    const state = { event: key.slice(6, -5), chapter, heat, missions, poll, live: body.live !== false, updatedAt: new Date().toISOString() };
     try {
       await S3.putJson(key, state);
       return { statusCode: 200, headers: JSON_HDRS, body: JSON.stringify({ ok: true, state }) };
