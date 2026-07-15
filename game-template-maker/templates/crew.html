@@ -214,6 +214,7 @@
   var PREFIX="{{web.storagePrefix}}";
 
   // ---------- config from the QR the Handler generates ----------
+  var eventKey=(qs.get('e')||'main').toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40)||'main';
   var chapterNo=parseInt(qs.get('ch'),10)||1;
   var heat=Math.max(1,Math.min(5,parseInt(qs.get('heat'),10)||1));
   var missionIds=(qs.get('m')||'').split(',').map(function(s){return parseInt(s,10);}).filter(Boolean);
@@ -333,7 +334,7 @@
     if(changed){ renderJob(); renderWanted(); renderMissions(); wireBoothLink(); }
   }
   function pollLive(){
-    fetch('/api/show-state',{headers:{'Accept':'application/json'}})
+    fetch('/api/show-state?event='+encodeURIComponent(eventKey),{headers:{'Accept':'application/json'}})
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(st){ if(st && st.live) applyState(st); })
       .catch(function(){ /* no backend / offline — stay on QR values */ });

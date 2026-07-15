@@ -1,14 +1,20 @@
 // Live show state for the crew card <-> handler console.
-// Stored as a single small JSON object in the same Backblaze B2 bucket (no extra
-// service, no extra config — reuses the booth's keys via lib/s3).
+// Stored as small JSON objects in the same Backblaze B2 bucket (no extra service,
+// no extra config — reuses the booth's keys via lib/s3). One object PER EVENT, so
+// multiple rooms/cities can run simultaneously without colliding.
 //
-//   GET  /api/show-state           -> current { chapter, heat, missions, live, updatedAt }
-//                                     Public read so every crew phone can poll it.
-//   POST /api/show-state           -> write it. Requires the GALLERY_TOKEN (operator only).
-//                                     Body: { chapter:Number, heat:1..5, missions:[Number], live:Bool }
+//   GET  /api/show-state?event=<key>   -> that event's { chapter, heat, missions, live, updatedAt }
+//                                         Public read so every crew phone can poll it.
+//   POST /api/show-state               -> write it. Requires the GALLERY_TOKEN (operator only).
+//                                         Body: { event, chapter, heat:1..5, missions:[Number], live:Bool }
+//
+// `event` is slugified and defaults to "main" (a bare crew.html with no ?e follows "main").
 const S3 = require('./lib/s3');
 
-const STATE_KEY = 'state/live.json';
+function eventKey(raw) {
+  const slug = String(raw || 'main').toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+  return 'state/' + (slug || 'main') + '.json';
+}
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: S3.CORS, body: '' };
@@ -17,8 +23,9 @@ exports.handler = async (event) => {
   const JSON_HDRS = { ...S3.CORS, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };
 
   if (event.httpMethod === 'GET') {
+    const key = eventKey((event.queryStringParameters || {}).event);
     try {
-      const state = (await S3.getJson(STATE_KEY)) || { live: false };
+      const state = (await S3.getJson(key)) || { live: false };
       return { statusCode: 200, headers: JSON_HDRS, body: JSON.stringify(state) };
     } catch (e) {
       return { statusCode: 502, headers: S3.CORS, body: JSON.stringify({ error: String(e.message || e) }) };
@@ -34,9 +41,10 @@ exports.handler = async (event) => {
     const missions = Array.isArray(body.missions)
       ? body.missions.map(n => parseInt(n, 10)).filter(n => !isNaN(n)).slice(0, 6)
       : [];
-    const state = { chapter, heat, missions, live: body.live !== false, updatedAt: new Date().toISOString() };
+    const key = eventKey(body.event);
+    const state = { event: key.slice(6, -5), chapter, heat, missions, live: body.live !== false, updatedAt: new Date().toISOString() };
     try {
-      await S3.putJson(STATE_KEY, state);
+      await S3.putJson(key, state);
       return { statusCode: 200, headers: JSON_HDRS, body: JSON.stringify({ ok: true, state }) };
     } catch (e) {
       return { statusCode: 502, headers: S3.CORS, body: JSON.stringify({ error: String(e.message || e) }) };

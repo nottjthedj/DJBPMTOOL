@@ -168,6 +168,15 @@
 
   <!-- ===== CREW LINK ===== -->
   <div class="panel" id="crew">
+    <div class="h">Event</div>
+    <div class="field">
+      <label>Event key — one per room / city running tonight</label>
+      <input class="sel" id="eventKey" placeholder="main" autocomplete="off" />
+    </div>
+    <p style="color:var(--dim);font-size:12px;line-height:1.5;margin:-4px 0 4px;">
+      Each event has its own live channel and its own crew QR. Two rooms = two keys
+      (e.g. <span class="mono">chicago</span>, <span class="mono">detroit</span>) — they never collide.</p>
+
     <div class="h">Live control</div>
     <div class="livebar">
       <button class="btn" id="goLive">◉ Go Live</button>
@@ -207,6 +216,8 @@
   var picked=[]; // mission ids
   var heat=1, chapterNo=1;
   var PREFIX="{{web.storagePrefix}}";
+  function slugEvent(s){ return (String(s||'main').toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40))||'main'; }
+  var eventKey=slugEvent(localStorage.getItem(PREFIX+'_event')||'main');
 
   // ---- toast ----
   var toastEl=null, toastTimer=null;
@@ -230,12 +241,12 @@
     b.classList.toggle('on',live); b.textContent=live?'■ Stop Live':'◉ Go Live';
     dot.classList.toggle('on',live);
     $('liveStat').innerHTML=live
-      ? 'Live — <b>the room is following</b>. Change the chapter, missions or wanted level and it pushes automatically.'
+      ? 'Live on <b>'+eventKey+'</b> — the room is following. Change the chapter, missions or wanted level and it pushes automatically.'
       : 'Off — guests see whatever their QR encoded.';
   }
   function pushState(extra){
     if(!ensureToken()){ toast('Passcode needed to go live'); return; }
-    var payload={chapter:chapterNo,heat:heat,missions:picked,live:live};
+    var payload={event:eventKey,chapter:chapterNo,heat:heat,missions:picked,live:live};
     if(extra) for(var k in extra) payload[k]=extra[k];
     fetch('/api/show-state',{method:'POST',headers:{'Content-Type':'application/json','x-gallery-token':TOKEN},body:JSON.stringify(payload)})
       .then(function(r){
@@ -337,6 +348,7 @@
   function syncCrew(){
     var base=location.origin+location.pathname.replace(/handler\.html$/,'crew.html');
     var p=new URLSearchParams();
+    p.set('e',eventKey);
     p.set('ch',chapterNo); p.set('heat',heat);
     if(picked.length) p.set('m',picked.join(','));
     var url=base+'?'+p.toString();
@@ -347,6 +359,19 @@
     $('crewUrl').select();
     if(navigator.clipboard) navigator.clipboard.writeText($('crewUrl').value);
     this.textContent='Copied ✓'; var b=this; setTimeout(function(){b.textContent='Copy';},1200);
+  };
+
+  // ---- event key ----
+  var evInput=$('eventKey');
+  evInput.value=eventKey;
+  evInput.onchange=function(){            // fires on blur / Enter, not per keystroke
+    var prevLive=live, prevKey=eventKey;
+    eventKey=slugEvent(this.value);
+    this.value=eventKey;                  // show the normalized slug
+    localStorage.setItem(PREFIX+'_event',eventKey);
+    syncCrew(); paintLive();
+    // moving a running show to a new key: turn the old one off, light the new one up
+    if(prevLive && eventKey!==prevKey){ pushState({event:prevKey,live:false}); pushState(); }
   };
 
   // ---- go live ----

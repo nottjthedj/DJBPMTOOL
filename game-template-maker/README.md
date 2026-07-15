@@ -162,10 +162,13 @@ config = the whole system, re-skinned. Expand infinitely.
   Level and missions within a few seconds — change them on the Show/Missions tabs and
   the whole room updates. Guests scan **one static QR**; live state overrides whatever
   the QR encoded, and falls back to the QR's values when the show isn't live.
-  - It reuses the booth's Backblaze B2 (state lives in `state/live.json`) via the
-    `show-state` function — **no new service or config.** `GET /api/show-state` is public
-    (phones poll it); `POST` requires the `GALLERY_TOKEN`.
-  - One live show per deployment. (Multi-room simultaneous shows would need a per-event key.)
+  - It reuses the booth's Backblaze B2 (state lives in `state/<event>.json`) via the
+    `show-state` function — **no new service or config.** `GET /api/show-state?event=<key>`
+    is public (phones poll it); `POST` requires the `GALLERY_TOKEN`.
+  - **Per-event keys** — each room/city runs its own live channel. Set an **Event key**
+    in the console (e.g. `chicago`, `detroit`); its crew QR carries `?e=<key>` and only
+    that room follows it. Multiple shows run simultaneously without colliding. A bare
+    `crew.html` (no `?e`) follows the default `main` channel, so single-room stays simple.
 - The booth's own backend (Backblaze B2 + NAS) is unchanged and documented in the
   generated `SETUP.md`.
 ```
