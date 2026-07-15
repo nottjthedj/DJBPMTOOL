@@ -130,6 +130,20 @@ def build_tokens(cfg: dict, config_dir: str) -> dict:
             data = base64.b64encode(f.read()).decode("ascii")
         logo_uri = f"'data:image/{mime};base64,{data}'"
 
+    # ---- show data (optional) -> powers the crew card + handler console ----
+    # Accept an inline object or a path (relative to the config file) under "show".
+    show = cfg.get("show")
+    if isinstance(show, str):
+        sp = show if os.path.isabs(show) else os.path.join(config_dir, show)
+        if not os.path.exists(sp):
+            raise SystemExit(f"show points to a missing file: {sp}")
+        with open(sp, encoding="utf-8") as f:
+            show = json.load(f)
+    if not isinstance(show, dict):
+        show = {}
+    # embed safely: "</" broken so the blob can't close the <script> early
+    show_json = json.dumps(show, ensure_ascii=False).replace("</", "<\\/")
+
     tokens = {
         # brand / identity
         "brand.name": name,
@@ -142,6 +156,7 @@ def build_tokens(cfg: dict, config_dir: str) -> dict:
         "brand.hashtag": brand.get("hashtag", "#" + "".join(w.capitalize() for w in name.split())),
         "brand.galleryCta": brand.get("galleryCta", f"Add to {short} Gallery"),
         "brand.galleryDone": brand.get("galleryDone", "Added to Gallery"),
+        "brand.legal": brand.get("legal", ""),
         # colours (base)
         "colors.bg": colors["bg"],
         "colors.primary": colors["primary"],
@@ -174,6 +189,10 @@ def build_tokens(cfg: dict, config_dir: str) -> dict:
         "web.corsOriginsJs": cors_js,
         # logo
         "logo_data_uri": logo_uri,
+        # show (crew card + handler console)
+        "show_json": show_json,
+        # internal flag (not a template token): whether show-driven modules apply
+        "_has_show": bool(show),
     }
     return tokens
 
@@ -200,10 +219,18 @@ def generate(config_path: str, out_dir: str) -> None:
     if not os.path.isdir(TEMPLATES):
         raise SystemExit(f"templates/ not found next to make_booth.py ({TEMPLATES})")
 
+    # Show-driven modules only make sense when a show is supplied.
+    SHOW_ONLY = {"crew.html", "handler.html"}
+    has_show = tokens.get("_has_show")
+
     os.makedirs(out_dir, exist_ok=True)
     count = 0
+    skipped = []
     for root, _dirs, files in os.walk(TEMPLATES):
         for fn in files:
+            if fn in SHOW_ONLY and not has_show:
+                skipped.append(fn)
+                continue
             src = os.path.join(root, fn)
             rel = os.path.relpath(src, TEMPLATES)
             dst = os.path.join(out_dir, rel)
@@ -219,10 +246,20 @@ def generate(config_path: str, out_dir: str) -> None:
                 shutil.copy2(src, dst)
             count += 1
 
-    print(f"✓ Generated {tokens['brand.name']} booth → {out_dir}  ({count} files)")
+    modules = ["booth (index/gallery/setup + B2 + NAS)"]
+    if has_show:
+        n_ch = len(json.loads(tokens["show_json"]).get("chapters", []))
+        n_mi = len(json.loads(tokens["show_json"]).get("missions", []))
+        modules.append("crew card (player)")
+        modules.append(f"handler console ({n_ch} chapters · {n_mi} missions)")
+
+    print(f"✓ Generated {tokens['brand.name']} → {out_dir}  ({count} files)")
     print(f"  brand:   {tokens['brand.name']} ({tokens['brand.short']})")
     print(f"  colours: primary {tokens['colors.primary']} · secondary {tokens['colors.secondary']}")
     print(f"  logo:    {'embedded' if tokens['logo_data_uri'] != 'null' else 'text lockup (no logo file)'}")
+    print(f"  modules: {', '.join(modules)}")
+    if skipped:
+        print(f"  skipped: {', '.join(sorted(set(skipped)))} (no \"show\" in config)")
     print()
     print("  Next: drag the folder onto app.netlify.com/drop, then follow SETUP.md.")
 

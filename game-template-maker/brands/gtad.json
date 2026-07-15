@@ -12,17 +12,20 @@
     "hashtag": "#GrandTheftAfterDark",
     "galleryCta": "Add to GTAD Gallery",
     "galleryDone": "Added to Gallery",
+    "legal": "Independent fan tribute event. Not affiliated with, endorsed by, or sponsored by Rockstar Games, Take-Two Interactive, or any related entity.",
     "logo": "gtad-logo.png"
   },
 
+  "show": "gtad.show.json",
+
   "colors": {
-    "bg": "#0a0a0f",
-    "primary": "#ff1e6c",
-    "primaryBright": "#ff4f8b",
-    "secondary": "#16e0ff",
+    "bg": "#000000",
+    "primary": "#FF1493",
+    "primaryBright": "#ff4faf",
+    "secondary": "#00E5E5",
     "accent": "#ffc23d",
-    "ink": "#f5f5fa",
-    "dim": "#9aa0b5"
+    "ink": "#ffffff",
+    "dim": "#8a8a94"
   },
 
   "socials": {

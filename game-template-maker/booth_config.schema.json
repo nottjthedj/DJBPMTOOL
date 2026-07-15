@@ -9,6 +9,11 @@
   "properties": {
     "_comment": { "type": "string", "description": "Free-form note; ignored by the generator." },
 
+    "show": {
+      "description": "Show data that powers the crew card + handler console. A path (relative to this config) to a *.show.json file, or an inline object. Omit for a booth-only brand.",
+      "type": ["string", "object"]
+    },
+
     "brand": {
       "type": "object",
       "required": ["name", "short", "lineOne", "lineTwo"],
@@ -24,6 +29,7 @@
         "hashtag":     { "type": "string", "description": "Default hashtag stamped on every capture. Defaults to #CamelCasedName." },
         "galleryCta":  { "type": "string", "description": "Text of the gallery opt-in button. Defaults to 'Add to <short> Gallery'." },
         "galleryDone": { "type": "string", "default": "Added to Gallery", "description": "Confirmation text after opting in." },
+        "legal":       { "type": "string", "description": "Legal/disclaimer line shown in footers of the crew card and handler console." },
         "logo":        { "type": "string", "description": "Path (relative to the config file) to a white-on-transparent logo PNG. Optional; falls back to a text lockup." }
       }
     },

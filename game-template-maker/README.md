@@ -1,121 +1,130 @@
-# Game Template Maker — Photo Booth
+# Game Template Maker — event platform edition
 
-Recreate the **GTAD photo-booth** for any brand from a single config file.
-Change the **colour scheme, web info, socials, and branding** in one JSON, run one
-command, and get a complete, ready-to-deploy site — the same proven formula every time.
+Recreate the **Grand Theft After-Dark** event system for any brand from a single set
+of config files. Fill in the blanks, drop in your logo + show data, run one command,
+and get a complete, deployable multi-module site — the same proven formula every time.
 
-> The booth we sold: guests scan a QR at the event → open a branded camera on their
-> phone → shoot a photo/video with your overlay burned in → save, share, and opt their
-> shot into your gallery. You review/approve captures from a private gallery page.
-> This tool stamps out that exact experience for a new brand in seconds.
+> **What GTAD is:** a live, lore-driven interactive game-show. Guests scan a QR on
+> arrival, get "made" into the crew, and play through a night of missions run by the
+> host ("the Handler"). This tool stamps out that whole experience — booth, crew card,
+> and host console — re-skinned for a new brand.
+
+---
+
+## Modules it generates
+
+| Module | File(s) | Who uses it | What it does |
+|--------|---------|-------------|--------------|
+| **Photo Booth** | `index.html`, `gallery.html`, `setup.html`, `netlify/` | guests + operator | Branded camera → photo/video with your overlay → save/share/opt-in. Includes the **gallery admin** (approve/delete) and the secure **Backblaze-B2 → NAS** pipeline. |
+| **Crew Card** *(player)* | `crew.html` | guests | Scan-to-get-made card: member number, **tonight's Job** + Handler transmission, live **Wanted Level**, tonight's **missions**, and a link into the booth. |
+| **Handler Console** *(admin)* | `handler.html` | the host | Chapter picker (your whole season), the opening-transmission **teleprompter**, a **mission picker** (pick 3, with props/how-to/VO), Wanted-Level control, and a **QR generator** that hands guests a crew card pre-loaded with tonight's setup. Links to the gallery. |
+
+The Booth ships for every brand. The **Crew Card + Handler Console** are generated only
+when the config includes a **`show`** (your chapters + missions) — see below.
 
 ---
 
 ## Quick start
 
 ```bash
-# reproduce the original show
+# reproduce the real show (booth + crew card + handler console)
 python3 make_booth.py brands/gtad.json
 
-# spin up a brand-new one
-cp brands/gtad.json brands/my-brand.json      # edit the values
-python3 make_booth.py brands/my-brand.json     # -> build/<projectSlug>/
+# a booth-only brand (no show data)
+python3 make_booth.py brands/example-midnight-arcade.json
 ```
 
-Output lands in `build/<projectSlug>/` — a full site (`index.html`, `gallery.html`,
-`setup.html`, the Netlify functions, `netlify.toml`, `DEPLOY.md`, `SETUP.md`).
-Drag that folder onto **app.netlify.com/drop**, then follow the generated `SETUP.md`.
-
-No dependencies, no install — just Python 3.10+.
+Output lands in `build/<projectSlug>/`. Drag that folder onto **app.netlify.com/drop**,
+then follow the generated `SETUP.md`. No dependencies — just Python 3.10+.
 
 ---
 
-## What you change (and what stays)
+## What you change (per brand)
 
-**You change (per brand, in the config):**
+| File | Controls |
+|------|----------|
+| `brands/<brand>.json` | Branding (name, logo lockup, kicker, hashtag, CTA, **legal line**), the **colour scheme**, socials, web/deploy info, and a pointer to the show file. |
+| `brands/<brand>.show.json` | The **show**: your season of chapters (codename, act, the job, the Handler transmission) and your missions (props, how-it-runs, win, Handler VO, variation) + vocabulary and Wanted-Level labels. |
+| your logo image | White-on-transparent PNG, embedded + burned into captures. Optional (text lockup fallback). |
 
-| Group      | What it controls                                                            |
-|------------|-----------------------------------------------------------------------------|
-| `brand`    | Name, two-line logo lockup, short code, kicker, tagline, hashtag, CTA, logo |
-| `colors`   | The whole colour scheme — background, primary, secondary, accent, text      |
-| `socials`  | Instagram / Facebook / TikTok links + the @handle used in share captions    |
-| `web`      | Domain, storage namespace, Netlify name, bucket name, CORS origins          |
-
-**Stays the same (the formula):** the camera flow, the three photo frames
-(Badge / Neon / Minimal), photo + 15-second video capture, the overlay renderer,
-save/share/gallery upload, the operator gallery with approve/delete, QR event setup,
-and the whole secure Backblaze-B2 upload pipeline.
+Everything the formula keeps fixed — the camera flow, the three photo frames, the
+crew-card mechanics, the console's teleprompter/mission-picker/QR tooling — stays put.
 
 ---
 
-## Config reference
+## Brand config reference (`brands/*.json`)
 
-Every field lives in `brands/*.json`. Required fields are marked ★; everything else
-has a sensible default so a minimal config still produces a polished booth.
+★ = required. Everything else has a sensible default.
 
 ```jsonc
 {
   "brand": {
-    "name":        "Grand Theft After-Dark",   // ★ full name (titles, captions)
-    "short":       "GTAD",                      // ★ short code (gallery, buttons)
-    "lineOne":     "Grand Theft",               // ★ top line of the logo lockup
-    "lineTwo":     "After-Dark",                // ★ bottom line of the logo lockup
-    "kicker":      "★ Presents ★",              //   small label above the logo
-    "tagline":     "Tap below to strike a pose.",
-    "followLabel": "Follow the movement",       //   label above the social buttons
-    "hashtag":     "#GrandTheftAfterDark",      //   default hashtag on every shot
-    "galleryCta":  "Add to GTAD Gallery",       //   the opt-in button text
-    "galleryDone": "Added to Gallery",          //   confirmation text
-    "logo":        "gtad-logo.png"              //   white artwork on transparent/black;
-                                                //   optional — omit for a text-only lockup
+    "name": "Grand Theft After-Dark",   // ★ full name
+    "short": "GTAD",                     // ★ short code
+    "lineOne": "Grand Theft",            // ★ logo top line
+    "lineTwo": "After-Dark",             // ★ logo bottom line
+    "kicker": "★ Presents ★",
+    "tagline": "Tap below to strike a pose.",
+    "followLabel": "Follow the movement",
+    "hashtag": "#GrandTheftAfterDark",
+    "galleryCta": "Add to GTAD Gallery",
+    "galleryDone": "Added to Gallery",
+    "legal": "Independent fan tribute event. Not affiliated with …",  // footer disclaimer
+    "logo": "gtad-logo.png"              // optional; text lockup if omitted
   },
 
-  "colors": {                                   //   any valid #hex; omit any to keep the house value
-    "bg":            "#0a0a0f",
-    "primary":       "#ff1e6c",                 //   headline + primary buttons + glow
-    "primaryBright": "#ff4f8b",
-    "secondary":     "#16e0ff",                 //   secondary accent + approve/share
-    "accent":        "#ffc23d",                 //   kicker / date highlights
-    "ink":           "#f5f5fa",                 //   body text
-    "dim":           "#9aa0b5"                  //   muted text
+  "show": "gtad.show.json",              // path (or inline object). Omit → booth-only.
+
+  "colors": {                            // any #hex; darker shades are derived
+    "bg": "#000000", "primary": "#FF1493", "primaryBright": "#ff4faf",
+    "secondary": "#00E5E5", "accent": "#ffc23d", "ink": "#ffffff", "dim": "#8a8a94"
   },
 
   "socials": {
     "instagram": "https://instagram.com/grandtheftafterdark",
     "facebook":  "https://facebook.com/grandtheftafterdark",
     "tiktok":    "https://tiktok.com/@grandtheftafterdark",
-    "igHandle":  "grandtheftafterdark"          //   used in the share caption; auto-derived if omitted
+    "igHandle":  "grandtheftafterdark"
   },
 
   "web": {
-    "storagePrefix": "gtad",                    // ★ namespace for this brand's saved settings + filenames
-    "netlifyName":   "gtad",                     //   <name>.netlify.app  (default: storagePrefix)
+    "storagePrefix": "gtad",             // ★ namespace for saved settings/filenames
+    "netlifyName": "gtad",
     "primaryDomain": "booth.grandtheftafterdark.com",
-    "rootDomain":    "grandtheftafterdark.com",
-    "bucketName":    "gtad-booth-inbox",         //   Backblaze bucket (default: <prefix>-booth-inbox)
-    "projectSlug":   "gtad-photobooth",          //   output folder name
-    "corsRuleName":  "gtadBooth",
-    "corsOrigins":   [                            //   origins allowed to upload/view (auto-built if omitted)
-      "https://gtad.netlify.app",
-      "https://booth.grandtheftafterdark.com",
-      "https://grandtheftafterdark.com"
-    ]
+    "rootDomain": "grandtheftafterdark.com",
+    "bucketName": "gtad-booth-inbox",
+    "projectSlug": "gtad-photobooth",
+    "corsRuleName": "gtadBooth",
+    "corsOrigins": ["https://gtad.netlify.app", "https://booth.grandtheftafterdark.com"]
   }
 }
 ```
 
-### Colour scheme notes
-- Only the seven base colours are set; the darker shadow/gradient shades used in the UI
-  are **derived automatically** from them, so a new palette stays internally consistent.
-- The colours flow everywhere — CSS, the neon glows, *and* the overlay burned into each
-  photo/video — from these seven values.
+## Show config reference (`brands/*.show.json`)
 
-### Logo notes
-- Provide `brand.logo` as **white artwork on a transparent (or black) background**. The
-  booth keys brightness → opacity and trims the margins, then embeds it (single file, no
-  hosting needed) and burns it into every capture.
-- Omit `brand.logo` and the booth falls back to a styled **text lockup** of
-  `lineOne` / `lineTwo` (see the Midnight Arcade example).
+```jsonc
+{
+  "meta":     { "name": "…", "tagline": "…", "legal": "…" },
+  "vocabulary": { "crew": "the attendees", "handler": "the host character", … },
+  "wantedLevels": [ { "stars": 1, "label": "ON THE RADAR" }, … 5 ],
+  "crewCard": { "madeHeadline": "YOU'RE MADE", "memberLabel": "MADE MEMBER", … },
+  "chapters": [
+    { "n": 1, "codename": "THE RECRUITMENT", "act": "Act I — Assembly the Crew",
+      "job": "The crew gets made…", "endsOn": "…", "transmission": "Listen up…" }
+    // …one per night of your season
+  ],
+  "missions": [
+    { "n": 1, "name": "THE LINEUP", "category": "Stage Theatrical", "gtaRef": "Police lineup",
+      "props": "…", "howItRuns": "…", "win": "…", "time": "3–4 min",
+      "handlerVO": "Line 'em up…", "variation": "…" }
+    // …your mission playbook
+  ],
+  "rotation": { "firstNight": [1,6,4], "returning": [10,7,9], "smallRoom": [8,11,5] }
+}
+```
+
+`brands/gtad.show.json` is the real GTAD bible — **24 chapters** (a full 3-act season)
+and **11 missions** — extracted from the production docs. Copy it to start a new show.
 
 ---
 
@@ -123,29 +132,34 @@ has a sensible default so a minimal config still produces a polished booth.
 
 ```
 game-template-maker/
-├─ make_booth.py                  the generator (stdlib only)
-├─ booth_config.schema.json       machine-readable config schema
+├─ make_booth.py               the generator (stdlib only)
+├─ booth_config.schema.json    machine-readable brand-config schema
 ├─ brands/
-│  ├─ gtad.json                   the original show — reproduces GTAD-PHOTOBOOTH
-│  ├─ gtad-logo.png               the GTAD logo (referenced by gtad.json)
-│  └─ example-midnight-arcade.json  a second brand off the same formula
-└─ templates/                     the tokenized master booth (source of truth)
-   ├─ index.html  gallery.html  setup.html
+│  ├─ gtad.json                the show — reproduces every module
+│  ├─ gtad.show.json           24 chapters + 11 missions (the GTAD bible)
+│  ├─ gtad-logo.png            the GTAD logo
+│  └─ example-midnight-arcade.json   a booth-only rebrand (no show)
+└─ templates/                  the tokenized masters (source of truth)
+   ├─ index.html  gallery.html  setup.html      (booth)
+   ├─ crew.html                                  (player: crew card)
+   ├─ handler.html                               (admin: handler console)
    ├─ netlify.toml  DEPLOY.md  SETUP.md
-   └─ netlify/functions/…         secure B2 upload + gallery API
+   └─ netlify/functions/…                        (secure B2 upload + gallery API)
 ```
 
-To evolve the booth itself for **every** brand, edit `templates/`. To change **one**
-brand, edit its `brands/*.json`. Regenerate and redeploy.
+To evolve a module for **every** brand, edit `templates/`. To change **one** brand,
+edit its `brands/*.json` (+ `*.show.json`). Regenerate and redeploy. New brand = new
+config = the whole system, re-skinned. Expand infinitely.
 
 ---
 
-## Deploy (per brand, once)
+## Notes
 
-1. `python3 make_booth.py brands/<brand>.json`
-2. Drag `build/<projectSlug>/` onto **app.netlify.com/drop**.
-3. Follow the generated **`SETUP.md`** — create the Backblaze bucket, add the five
-   environment variables, point your domain. ~15 minutes.
-4. Open `setup.html` on the site to generate the per-event QR code.
-
-That's the whole loop. New brand = new config = new booth. Expand infinitely.
+- **Colour scheme** flows everywhere — CSS, neon glows, the photo overlay, the crew
+  card and console — from seven base colours; darker shades are derived automatically.
+- **Live host→crowd sync** (the Handler pushing a Wanted Level to every phone in real
+  time) needs a small backend and is a future add-on; today the console hands each
+  guest a QR that pre-loads tonight's chapter, missions, and Wanted Level.
+- The booth's own backend (Backblaze B2 + NAS) is unchanged and documented in the
+  generated `SETUP.md`.
+```
