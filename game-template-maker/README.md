@@ -157,9 +157,15 @@ config = the whole system, re-skinned. Expand infinitely.
 
 - **Colour scheme** flows everywhere — CSS, neon glows, the photo overlay, the crew
   card and console — from seven base colours; darker shades are derived automatically.
-- **Live host→crowd sync** (the Handler pushing a Wanted Level to every phone in real
-  time) needs a small backend and is a future add-on; today the console hands each
-  guest a QR that pre-loads tonight's chapter, missions, and Wanted Level.
+- **Live host→crowd sync is built in.** In the Handler Console, tap **Go Live** (enter
+  your `GALLERY_TOKEN` once) and every crew phone follows the current chapter, Wanted
+  Level and missions within a few seconds — change them on the Show/Missions tabs and
+  the whole room updates. Guests scan **one static QR**; live state overrides whatever
+  the QR encoded, and falls back to the QR's values when the show isn't live.
+  - It reuses the booth's Backblaze B2 (state lives in `state/live.json`) via the
+    `show-state` function — **no new service or config.** `GET /api/show-state` is public
+    (phones poll it); `POST` requires the `GALLERY_TOKEN`.
+  - One live show per deployment. (Multi-room simultaneous shows would need a per-event key.)
 - The booth's own backend (Backblaze B2 + NAS) is unchanged and documented in the
   generated `SETUP.md`.
 ```

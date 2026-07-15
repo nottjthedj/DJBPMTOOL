@@ -25,3 +25,7 @@
   from = "/api/set-cors"
   to = "/.netlify/functions/set-cors"
   status = 200
+[[redirects]]
+  from = "/api/show-state"
+  to = "/.netlify/functions/show-state"
+  status = 200

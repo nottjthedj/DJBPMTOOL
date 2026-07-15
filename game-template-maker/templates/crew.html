@@ -263,12 +263,15 @@
     $('wantedStars').innerHTML=stars(heat);
     $('wantedName').textContent=lvl.label||'';
   }
+  var lastChapter=null;
   function renderJob(){
     var c=chapter(chapterNo);
     $('jobAct').textContent=c.act||'';
     $('jobCode').textContent=c.codename||'';
     $('jobBrief').innerHTML='<b>The job:</b> '+(c.job||'');
-    if(c.transmission) typeOut($('transBody'), c.transmission);
+    // only (re)play the transmission when the chapter actually changes
+    if(c.transmission && chapterNo!==lastChapter) typeOut($('transBody'), c.transmission);
+    lastChapter=chapterNo;
   }
   function renderMissions(){
     var wrap=$('missions'); wrap.innerHTML='';
@@ -312,6 +315,33 @@
     renderJob(); renderWanted(); renderMissions(); renderSocials(); wireBoothLink();
     $('intro').classList.remove('on'); $('crew').classList.add('on');
     window.scrollTo(0,0);
+    startLive();
+  }
+
+  // ---------- live mode: follow the Handler's show state in real time ----------
+  // When the show is live, the current chapter / wanted level / missions from the
+  // console override whatever this QR encoded — so one static QR always shows "now".
+  var liveTimer=null;
+  function applyState(st){
+    var changed=false;
+    if(st.chapter && st.chapter!==chapterNo){ chapterNo=st.chapter; changed=true; }
+    var newHeat=Math.max(1,Math.min(5,st.heat||heat));
+    if(newHeat!==heat){ heat=newHeat; changed=true; }
+    if(Array.isArray(st.missions) && st.missions.length){
+      if(st.missions.join(',')!==missionIds.join(',')){ missionIds=st.missions.slice(); changed=true; }
+    }
+    if(changed){ renderJob(); renderWanted(); renderMissions(); wireBoothLink(); }
+  }
+  function pollLive(){
+    fetch('/api/show-state',{headers:{'Accept':'application/json'}})
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(st){ if(st && st.live) applyState(st); })
+      .catch(function(){ /* no backend / offline — stay on QR values */ });
+  }
+  function startLive(){
+    if(liveTimer) return;
+    pollLive();
+    liveTimer=setInterval(pollLive, 6000);
   }
 
   // returning members skip the intro

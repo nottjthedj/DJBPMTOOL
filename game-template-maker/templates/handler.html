@@ -105,6 +105,20 @@
   .btn{border:0;cursor:pointer;font-weight:800;text-transform:uppercase;letter-spacing:.05em;border-radius:11px;
     padding:12px 16px;font-size:13px;color:#fff;background:linear-gradient(135deg,var(--primary),var(--primary-bright));}
   .btn.ghost{background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--ink);}
+  .livedot{margin-left:auto;font-size:11px;font-weight:800;letter-spacing:.12em;color:var(--primary);
+    display:none;align-items:center;}
+  .livedot.on{display:inline-flex;animation:pulse 1.4s infinite;}
+  @keyframes pulse{50%{opacity:.35;}}
+  .livebar{display:flex;align-items:center;gap:12px;border:1px solid rgba({{colors.primaryRgb}},.4);
+    border-radius:14px;padding:12px 14px;background:linear-gradient(180deg,rgba({{colors.primaryRgb}},.06),transparent);}
+  .livebar .btn{white-space:nowrap;}
+  .livebar .btn.on{background:linear-gradient(135deg,#ff3b3b,#ff2d2d);box-shadow:0 6px 22px rgba(255,45,45,.4);}
+  .livestat{font-size:12px;color:var(--dim);line-height:1.4;}
+  .livestat b{color:var(--primary-bright);}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:50;
+    background:rgba({{colors.bgRgb}},.95);border:1px solid var(--line);color:#fff;padding:11px 18px;
+    border-radius:999px;font-size:13px;font-weight:700;opacity:0;transition:opacity .25s;pointer-events:none;}
+  .toast.show{opacity:1;}
   .links{display:grid;gap:10px;margin-top:8px;}
   .links a{display:block;text-align:center;text-decoration:none;padding:13px;border-radius:11px;font-weight:800;
     text-transform:uppercase;letter-spacing:.04em;font-size:13px;border:1px solid var(--line);
@@ -118,6 +132,7 @@
     <div class="brandline">
       <div class="logo"><span class="l1">{{brand.lineOne}}</span> <span class="l2">{{brand.lineTwo}}</span></div>
       <div class="console">Handler&nbsp;Console</div>
+      <span class="livedot" id="liveDot" title="Live — crew phones are following">● LIVE</span>
     </div>
     <div class="tabs">
       <button data-tab="show" class="active">Show</button>
@@ -153,6 +168,16 @@
 
   <!-- ===== CREW LINK ===== -->
   <div class="panel" id="crew">
+    <div class="h">Live control</div>
+    <div class="livebar">
+      <button class="btn" id="goLive">◉ Go Live</button>
+      <div class="livestat" id="liveStat">Off — guests see whatever their QR encoded.</div>
+    </div>
+    <p style="color:var(--dim);font-size:12.5px;line-height:1.5;margin:10px 0 0;">
+      When live, every crew phone polls the current chapter, wanted level and missions —
+      change them on the Show / Missions tabs and the whole room updates within a few seconds.
+      Guests scan the same QR below.</p>
+
     <div class="h">Guest crew-card QR</div>
     <p style="color:var(--dim);font-size:13px;line-height:1.5;margin:0 0 14px;">
       Set tonight's chapter + wanted level, then show/print this QR at the door. Guests scan it to get made — the card loads with tonight's job and the missions you picked.</p>
@@ -181,6 +206,45 @@
   var chapters=SHOW.chapters||[], missions=SHOW.missions||[];
   var picked=[]; // mission ids
   var heat=1, chapterNo=1;
+  var PREFIX="{{web.storagePrefix}}";
+
+  // ---- toast ----
+  var toastEl=null, toastTimer=null;
+  function toast(m){
+    if(!toastEl){ toastEl=document.createElement('div'); toastEl.className='toast'; document.body.appendChild(toastEl); }
+    toastEl.textContent=m; toastEl.classList.add('show');
+    clearTimeout(toastTimer); toastTimer=setTimeout(function(){toastEl.classList.remove('show');},2200);
+  }
+
+  // ---- live push (writes show state to B2 via /api/show-state) ----
+  var TOKEN=localStorage.getItem(PREFIX+'_gallery_token')||'';
+  var live=false, pushTimer=null;
+  function ensureToken(){
+    if(TOKEN) return TOKEN;
+    var v=prompt('Operator passcode (your GALLERY_TOKEN) — unlocks live push:');
+    if(v){ TOKEN=v.trim(); localStorage.setItem(PREFIX+'_gallery_token',TOKEN); }
+    return TOKEN;
+  }
+  function paintLive(){
+    var b=$('goLive'), dot=$('liveDot');
+    b.classList.toggle('on',live); b.textContent=live?'■ Stop Live':'◉ Go Live';
+    dot.classList.toggle('on',live);
+    $('liveStat').innerHTML=live
+      ? 'Live — <b>the room is following</b>. Change the chapter, missions or wanted level and it pushes automatically.'
+      : 'Off — guests see whatever their QR encoded.';
+  }
+  function pushState(extra){
+    if(!ensureToken()){ toast('Passcode needed to go live'); return; }
+    var payload={chapter:chapterNo,heat:heat,missions:picked,live:live};
+    if(extra) for(var k in extra) payload[k]=extra[k];
+    fetch('/api/show-state',{method:'POST',headers:{'Content-Type':'application/json','x-gallery-token':TOKEN},body:JSON.stringify(payload)})
+      .then(function(r){
+        if(r.status===401){ toast('Wrong passcode'); TOKEN=''; localStorage.removeItem(PREFIX+'_gallery_token'); live=false; paintLive(); return; }
+        if(!r.ok) throw new Error(r.status);
+        if(payload.live) toast('Pushed to the crew ✓');
+      }).catch(function(){ toast('Push failed — check connection'); });
+  }
+  function maybePush(){ if(!live) return; clearTimeout(pushTimer); pushTimer=setTimeout(function(){pushState();},400); }
 
   // ---- tabs ----
   [].forEach.call(document.querySelectorAll('.tabs button'),function(b){
@@ -197,7 +261,7 @@
     sel.innerHTML=chapters.map(function(c){
       return '<option value="'+c.n+'">'+(c.n<10?'0':'')+c.n+' — '+c.codename+'</option>';
     }).join('');
-    sel.onchange=function(){ chapterNo=parseInt(this.value,10); renderChapter(); syncCrew(); };
+    sel.onchange=function(){ chapterNo=parseInt(this.value,10); renderChapter(); syncCrew(); maybePush(); };
   }
   function renderChapter(){
     var c=chapters.filter(function(x){return x.n===chapterNo;})[0]||{};
@@ -219,7 +283,7 @@
     defs.forEach(function(d){
       if(!d[1]) return;
       var b=document.createElement('button'); b.textContent=d[0];
-      b.onclick=function(){ picked=d[1].slice(0,3); renderMissions(); syncCrew(); };
+      b.onclick=function(){ picked=d[1].slice(0,3); renderMissions(); syncCrew(); maybePush(); };
       wrap.appendChild(b);
     });
   }
@@ -252,7 +316,7 @@
     var i=picked.indexOf(n);
     if(i>-1) picked.splice(i,1);
     else { if(picked.length>=3) picked.shift(); picked.push(n); }
-    renderMissions(); syncCrew();
+    renderMissions(); syncCrew(); maybePush();
   }
 
   // ---- wanted stars ----
@@ -260,7 +324,7 @@
     var wrap=$('starSel'); wrap.innerHTML='';
     for(var i=1;i<=5;i++){(function(i){
       var b=document.createElement('button'); b.textContent='★';
-      b.onclick=function(){ heat=i; paintStars(); syncCrew(); };
+      b.onclick=function(){ heat=i; paintStars(); syncCrew(); maybePush(); };
       wrap.appendChild(b);
     })(i);}
     paintStars();
@@ -285,10 +349,16 @@
     this.textContent='Copied ✓'; var b=this; setTimeout(function(){b.textContent='Copy';},1200);
   };
 
+  // ---- go live ----
+  $('goLive').onclick=function(){
+    live=!live; paintLive();
+    if(live) pushState(); else pushState({live:false});
+  };
+
   // ---- init ----
   fillChapters(); renderChapter(); recipeButtons();
   picked=((SHOW.rotation||{}).firstNight||[]).slice(0,3);
-  renderMissions(); starButtons(); syncCrew();
+  renderMissions(); starButtons(); syncCrew(); paintLive();
 })();
 </script>
 </body>

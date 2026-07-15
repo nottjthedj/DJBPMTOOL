@@ -87,7 +87,15 @@ Once you've confirmed sync works, Backblaze bucket → **Lifecycle Settings** �
 
 ## Reference — where everything lives
 
-- **Guests:** `{{web.primaryDomain}}` — shoot, save, share, opt-in
-- **You:** `{{web.primaryDomain}}/gallery.html` — review, approve, delete
+- **Guests (booth):** `{{web.primaryDomain}}` — shoot, save, share, opt-in
+- **Guests (crew card):** `{{web.primaryDomain}}/crew.html` — get made, tonight's job, missions
+- **You (gallery):** `{{web.primaryDomain}}/gallery.html` — review, approve, delete
+- **You (handler console):** `{{web.primaryDomain}}/handler.html` — run the show, **Go Live**, make the crew QR
 - **Raw uploads:** B2 `incoming/` → NAS `/photobooth/incoming/`
 - **Approved set:** B2 `approved/` → NAS `/photobooth/approved/`
+
+### Going live (no extra setup)
+On `handler.html` → **Crew Link** tab → **Go Live** (enter your `GALLERY_TOKEN` once).
+Every crew phone then follows the current chapter / wanted level / missions you set on the
+Show and Missions tabs. It writes a tiny `state/live.json` in the same B2 bucket — no new
+service or keys. `crew.html` polls it; when you're not live, the QR's own values are used.

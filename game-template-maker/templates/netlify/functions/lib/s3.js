@@ -54,11 +54,12 @@ function presignGet(key, expires) {
 }
 
 // Signed server-side request (Authorization-header flavor). Returns fetch Response.
-async function s3Request(method, key, query, extraHeaders) {
+// `body` (string) is signed and sent when present — used for PUTs with a payload.
+async function s3Request(method, key, query, extraHeaders, body) {
   const c = cfg();
   const { datestamp, amzdate } = stamps();
   const canonicalUri = key ? `/${c.bucket}/${encKey(key)}` : `/${c.bucket}`;
-  const payloadHash = sha256hex('');
+  const payloadHash = sha256hex(body || '');
   const h = { host: c.host, 'x-amz-content-sha256': payloadHash, 'x-amz-date': amzdate };
   if (extraHeaders) Object.keys(extraHeaders).forEach(k => { h[k.toLowerCase()] = extraHeaders[k]; });
   const names = Object.keys(h).sort();
@@ -74,7 +75,22 @@ async function s3Request(method, key, query, extraHeaders) {
   // Host is a forbidden fetch header (set automatically); send everything else + Authorization.
   const fetchHeaders = { Authorization: authorization };
   names.forEach(n => { if (n !== 'host') fetchHeaders[n] = h[n]; });
-  return fetch(url, { method, headers: fetchHeaders });
+  return fetch(url, { method, headers: fetchHeaders, body: body || undefined });
+}
+
+// Small JSON object <-> B2 helpers, for shared live state (the show-state function).
+async function putJson(key, obj) {
+  const body = JSON.stringify(obj);
+  const res = await s3Request('PUT', key, null, { 'content-type': 'application/json' }, body);
+  if (!res.ok) { const t = await res.text(); throw new Error('put ' + res.status + ' ' + t.slice(0, 200)); }
+  return true;
+}
+async function getJson(key) {
+  const res = await s3Request('GET', key, null, null);
+  if (res.status === 404) return null;
+  const t = await res.text();
+  if (!res.ok) throw new Error('get ' + res.status + ' ' + t.slice(0, 200));
+  try { return JSON.parse(t); } catch (e) { return null; }
 }
 
 async function listObjects(prefix) {
@@ -116,4 +132,4 @@ function authOK(event) {
   return t === c.galleryToken;
 }
 
-module.exports = { cfg, configured, presignGet, listObjects, copyObject, deleteObject, CORS, authOK };
+module.exports = { cfg, configured, presignGet, listObjects, copyObject, deleteObject, putJson, getJson, CORS, authOK };
