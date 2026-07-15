@@ -18,8 +18,15 @@ machine-readable schema. brands/gtad.json is the original show, as a worked exam
 from __future__ import annotations
 import argparse, base64, json, os, sys
 
-HERE = os.path.dirname(os.path.abspath(__file__))
+# Resource base: the source dir normally, or the PyInstaller bundle dir when frozen
+# into a desktop app (Booth Studio). Lets the same code find templates/ + brands/
+# whether run as a script or a packaged executable.
+if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+    HERE = sys._MEIPASS
+else:
+    HERE = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES = os.path.join(HERE, "templates")
+BRANDS = os.path.join(HERE, "brands")
 
 # ---------------------------------------------------------------------------
 # colour helpers
@@ -210,14 +217,14 @@ def render(text: str, tokens: dict, rel: str) -> str:
 
 TEXT_EXT = {".html", ".js", ".toml", ".md", ".txt", ".json", ".css"}
 
-def generate(config_path: str, out_dir: str) -> None:
-    with open(config_path, encoding="utf-8") as f:
-        cfg = json.load(f)
-    config_dir = os.path.dirname(os.path.abspath(config_path))
+# Core generator. Takes an in-memory config dict so it can be driven by the CLI or
+# the desktop app (Booth Studio). `config_dir` is where relative logo/show paths
+# resolve from. Returns a summary dict; raises SystemExit on bad input.
+def generate_from_cfg(cfg: dict, out_dir: str, config_dir: str = ".") -> dict:
     tokens = build_tokens(cfg, config_dir)
 
     if not os.path.isdir(TEMPLATES):
-        raise SystemExit(f"templates/ not found next to make_booth.py ({TEMPLATES})")
+        raise SystemExit(f"templates/ not found ({TEMPLATES})")
 
     # Show-driven modules only make sense when a show is supplied.
     SHOW_ONLY = {"crew.html", "handler.html"}
@@ -246,22 +253,40 @@ def generate(config_path: str, out_dir: str) -> None:
                 shutil.copy2(src, dst)
             count += 1
 
-    modules = ["booth (index/gallery/setup + B2 + NAS)"]
+    modules = ["booth"]
+    n_ch = n_mi = 0
     if has_show:
-        n_ch = len(json.loads(tokens["show_json"]).get("chapters", []))
-        n_mi = len(json.loads(tokens["show_json"]).get("missions", []))
-        modules.append("crew card (player)")
-        modules.append(f"handler console ({n_ch} chapters · {n_mi} missions)")
+        show = json.loads(tokens["show_json"])
+        n_ch, n_mi = len(show.get("chapters", [])), len(show.get("missions", []))
+        modules += ["crew card", "handler console"]
 
-    print(f"✓ Generated {tokens['brand.name']} → {out_dir}  ({count} files)")
-    print(f"  brand:   {tokens['brand.name']} ({tokens['brand.short']})")
-    print(f"  colours: primary {tokens['colors.primary']} · secondary {tokens['colors.secondary']}")
-    print(f"  logo:    {'embedded' if tokens['logo_data_uri'] != 'null' else 'text lockup (no logo file)'}")
-    print(f"  modules: {', '.join(modules)}")
-    if skipped:
-        print(f"  skipped: {', '.join(sorted(set(skipped)))} (no \"show\" in config)")
+    return {
+        "out_dir": out_dir, "count": count, "skipped": sorted(set(skipped)),
+        "brand_name": tokens["brand.name"], "brand_short": tokens["brand.short"],
+        "primary": tokens["colors.primary"], "secondary": tokens["colors.secondary"],
+        "logo_embedded": tokens["logo_data_uri"] != "null",
+        "has_show": bool(has_show), "chapters": n_ch, "missions": n_mi, "modules": modules,
+    }
+
+def generate(config_path: str, out_dir: str) -> dict:
+    with open(config_path, encoding="utf-8") as f:
+        cfg = json.load(f)
+    config_dir = os.path.dirname(os.path.abspath(config_path))
+    r = generate_from_cfg(cfg, out_dir, config_dir)
+
+    print(f"✓ Generated {r['brand_name']} → {out_dir}  ({r['count']} files)")
+    print(f"  brand:   {r['brand_name']} ({r['brand_short']})")
+    print(f"  colours: primary {r['primary']} · secondary {r['secondary']}")
+    print(f"  logo:    {'embedded' if r['logo_embedded'] else 'text lockup (no logo file)'}")
+    mods = "booth (index/gallery/setup + B2 + NAS)"
+    if r["has_show"]:
+        mods += f", crew card (player), handler console ({r['chapters']} chapters · {r['missions']} missions)"
+    print(f"  modules: {mods}")
+    if r["skipped"]:
+        print(f"  skipped: {', '.join(r['skipped'])} (no \"show\" in config)")
     print()
     print("  Next: drag the folder onto app.netlify.com/drop, then follow SETUP.md.")
+    return r
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Generate a branded photo-booth site from a JSON config.")

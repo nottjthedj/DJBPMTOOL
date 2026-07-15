@@ -24,7 +24,29 @@ when the config includes a **`show`** (your chapters + missions) — see below.
 
 ---
 
-## Quick start
+## Desktop app — Booth Studio (share this with people)
+
+**Booth Studio** is a double-click app (no terminal, no Python) for making branded
+sites. Fill in the blanks, pick colours, drop in a logo, click **Generate site…** →
+out comes a ready-to-deploy folder. It starts pre-loaded with the GTAD preset, and
+you can **Save config…** / **Open config…** to share brand setups as small JSON files.
+
+**Get the app:** the GitHub Actions **“Build Booth Studio”** workflow builds it for
+**Windows (.exe)**, **macOS (.app)** and **Linux** — download from the run's *Artifacts*
+(or attach them to a `v*` release). To build it yourself:
+
+```bash
+pip install pyinstaller
+cd game-template-maker
+pyinstaller booth-studio.spec        # -> dist/"Booth Studio"(.exe / .app)
+```
+
+First-launch note (unsigned app): **Windows** → “More info → Run anyway”;
+**macOS** → right-click the app → **Open** the first time.
+
+Prefer the command line? The generator underneath is `make_booth.py`:
+
+## Quick start (CLI)
 
 ```bash
 # reproduce the real show (booth + crew card + handler console)
@@ -132,6 +154,8 @@ and **11 missions** — extracted from the production docs. Copy it to start a n
 
 ```
 game-template-maker/
+├─ booth_studio.py             the desktop app (Tkinter GUI over the generator)
+├─ booth-studio.spec           PyInstaller build (Windows/macOS/Linux)
 ├─ make_booth.py               the generator (stdlib only)
 ├─ booth_config.schema.json    machine-readable brand-config schema
 ├─ brands/
