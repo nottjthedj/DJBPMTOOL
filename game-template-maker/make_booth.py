@@ -253,6 +253,14 @@ def generate_from_cfg(cfg: dict, out_dir: str, config_dir: str = ".") -> dict:
                 shutil.copy2(src, dst)
             count += 1
 
+    # index.html is the front door: the crew card when there's a show (get made ->
+    # play -> booth), otherwise the booth itself. It's a copy of the chosen module.
+    import shutil
+    front = os.path.join(out_dir, "crew.html" if has_show else "booth.html")
+    if os.path.exists(front):
+        shutil.copy2(front, os.path.join(out_dir, "index.html"))
+        count += 1
+
     modules = ["booth"]
     n_ch = n_mi = 0
     if has_show:

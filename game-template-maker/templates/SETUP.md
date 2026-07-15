@@ -87,10 +87,12 @@ Once you've confirmed sync works, Backblaze bucket → **Lifecycle Settings** �
 
 ## Reference — where everything lives
 
-- **Guests (booth):** `{{web.primaryDomain}}` — shoot, save, share, opt-in
-- **Guests (crew card):** `{{web.primaryDomain}}/crew.html` — get made, tonight's job, missions
+- **Guests (front door → crew card):** `{{web.primaryDomain}}` — get made, tonight's job, missions, live votes, and a link into the booth
+- **Photo booth:** `{{web.primaryDomain}}/booth.html` — shoot, save, share, opt-in
 - **You (gallery):** `{{web.primaryDomain}}/gallery.html` — review, approve, delete
-- **You (handler console):** `{{web.primaryDomain}}/handler.html` — run the show, **Go Live**, make the crew QR
+- **You (handler console):** `{{web.primaryDomain}}/handler.html` — run the show, **Go Live**, run polls, make the crew QR
+
+*(Booth-only brands with no show data get the booth as the front door instead.)*
 - **Raw uploads:** B2 `incoming/` → NAS `/photobooth/incoming/`
 - **Approved set:** B2 `approved/` → NAS `/photobooth/approved/`
 

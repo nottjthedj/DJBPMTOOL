@@ -15,8 +15,8 @@ and get a complete, deployable multi-module site — the same proven formula eve
 
 | Module | File(s) | Who uses it | What it does |
 |--------|---------|-------------|--------------|
-| **Photo Booth** | `index.html`, `gallery.html`, `setup.html`, `netlify/` | guests + operator | Branded camera → photo/video with your overlay → save/share/opt-in. Includes the **gallery admin** (approve/delete) and the secure **Backblaze-B2 → NAS** pipeline. |
-| **Crew Card** *(player)* | `crew.html` | guests | Scan-to-get-made card: member number, **tonight's Job** + Handler transmission, live **Wanted Level**, tonight's **missions**, and a link into the booth. |
+| **Crew Card** *(player, front door)* | `index.html` / `crew.html` | guests | The **front door** — one scan of the domain lands here: scan-to-get-made card with member number, **tonight's Job** + Handler transmission, live **Wanted Level**, **missions**, live **votes**, and a button into the booth. |
+| **Photo Booth** | `booth.html`, `gallery.html`, `setup.html`, `netlify/` | guests + operator | Branded camera → photo/video with your overlay → save/share/opt-in. Includes the **gallery admin** (approve/delete) and the secure **Backblaze-B2 → NAS** pipeline. |
 | **Handler Console** *(admin)* | `handler.html` | the host | Chapter picker (your whole season), the opening-transmission **teleprompter**, a **mission picker** (pick 3, with props/how-to/VO), Wanted-Level control, and a **QR generator** that hands guests a crew card pre-loaded with tonight's setup. Links to the gallery. |
 
 The Booth ships for every brand. The **Crew Card + Handler Console** are generated only
@@ -164,8 +164,8 @@ game-template-maker/
 │  ├─ gtad-logo.png            the GTAD logo
 │  └─ example-midnight-arcade.json   a booth-only rebrand (no show)
 └─ templates/                  the tokenized masters (source of truth)
-   ├─ index.html  gallery.html  setup.html      (booth)
-   ├─ crew.html                                  (player: crew card)
+   ├─ booth.html  gallery.html  setup.html      (photo booth)
+   ├─ crew.html                                  (player: crew card — also emitted as index.html when a show exists)
    ├─ handler.html                               (admin: handler console)
    ├─ netlify.toml  DEPLOY.md  SETUP.md
    └─ netlify/functions/…                        (secure B2 upload + gallery API)

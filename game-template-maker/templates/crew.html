@@ -218,7 +218,7 @@
     <div class="mgrid" id="missions"></div>
 
     <div class="btnrow">
-      <a class="btn booth" id="boothLink" href="index.html">📸 Hit the Photo Booth</a>
+      <a class="btn booth" id="boothLink" href="booth.html">📸 Hit the Photo Booth</a>
     </div>
 
     <div class="h">Follow the Crew</div>
@@ -325,7 +325,7 @@
     var p=new URLSearchParams();
     if(c.codename) p.set('date', c.codename);
     var q=p.toString();
-    $('boothLink').href='index.html'+(q?('?'+q):'');
+    $('boothLink').href='booth.html'+(q?('?'+q):'');
   }
 
   function showMade(){

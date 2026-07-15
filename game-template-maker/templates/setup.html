@@ -86,7 +86,7 @@
     if(c) qs.push('city='+encodeURIComponent(c));
     if(d) qs.push('date='+encodeURIComponent(d));
     if(t) qs.push('tag='+encodeURIComponent(t));
-    var link = origin + '/' + (qs.length ? '?'+qs.join('&') : '');
+    var link = origin + '/booth.html' + (qs.length ? '?'+qs.join('&') : '');
     $('link').value = link;
     $('openBtn').href = link;
     // QR (image service; the link is a public booth URL, nothing sensitive)
