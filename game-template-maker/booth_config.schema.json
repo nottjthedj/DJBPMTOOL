@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://grandtheftafterdark.com/booth_config.schema.json",
+  "title": "Photo Booth brand config",
+  "description": "Configuration for make_booth.py — stamps out a branded photo-booth site from the shared template.",
+  "type": "object",
+  "required": ["brand", "web"],
+  "additionalProperties": true,
+  "properties": {
+    "_comment": { "type": "string", "description": "Free-form note; ignored by the generator." },
+
+    "brand": {
+      "type": "object",
+      "required": ["name", "short", "lineOne", "lineTwo"],
+      "additionalProperties": false,
+      "properties": {
+        "name":        { "type": "string", "description": "Full brand name (page titles, share captions)." },
+        "short":       { "type": "string", "description": "Short code used in the gallery and buttons (e.g. GTAD)." },
+        "lineOne":     { "type": "string", "description": "Top line of the two-line logo lockup." },
+        "lineTwo":     { "type": "string", "description": "Bottom line of the two-line logo lockup." },
+        "kicker":      { "type": "string", "default": "★ Presents ★", "description": "Small label above the logo." },
+        "tagline":     { "type": "string", "default": "Tap below to strike a pose.", "description": "Sub-headline on the start screen." },
+        "followLabel": { "type": "string", "default": "Follow the movement", "description": "Label above the social buttons." },
+        "hashtag":     { "type": "string", "description": "Default hashtag stamped on every capture. Defaults to #CamelCasedName." },
+        "galleryCta":  { "type": "string", "description": "Text of the gallery opt-in button. Defaults to 'Add to <short> Gallery'." },
+        "galleryDone": { "type": "string", "default": "Added to Gallery", "description": "Confirmation text after opting in." },
+        "logo":        { "type": "string", "description": "Path (relative to the config file) to a white-on-transparent logo PNG. Optional; falls back to a text lockup." }
+      }
+    },
+
+    "colors": {
+      "type": "object",
+      "description": "Seven base colours. Darker shadow/gradient shades are derived automatically. Any omitted key keeps the house value.",
+      "additionalProperties": false,
+      "properties": {
+        "bg":            { "type": "string", "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$", "default": "#0a0a0f" },
+        "primary":       { "type": "string", "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$", "default": "#ff1e6c" },
+        "primaryBright": { "type": "string", "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$", "default": "#ff4f8b" },
+        "secondary":     { "type": "string", "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$", "default": "#16e0ff" },
+        "accent":        { "type": "string", "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$", "default": "#ffc23d" },
+        "ink":           { "type": "string", "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$", "default": "#f5f5fa" },
+        "dim":           { "type": "string", "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$", "default": "#9aa0b5" }
+      }
+    },
+
+    "socials": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "instagram": { "type": "string", "description": "Instagram profile URL." },
+        "facebook":  { "type": "string", "description": "Facebook page URL." },
+        "tiktok":    { "type": "string", "description": "TikTok profile URL." },
+        "igHandle":  { "type": "string", "description": "Handle used in the share caption (@handle). Derived from the IG URL if omitted." }
+      }
+    },
+
+    "web": {
+      "type": "object",
+      "required": ["storagePrefix"],
+      "additionalProperties": false,
+      "properties": {
+        "storagePrefix": { "type": "string", "pattern": "^[a-z0-9]+$", "description": "Namespace for saved settings and filenames (lowercase/digits)." },
+        "netlifyName":   { "type": "string", "description": "Subdomain of <name>.netlify.app. Defaults to storagePrefix." },
+        "primaryDomain": { "type": "string", "description": "Custom domain the booth runs on." },
+        "rootDomain":    { "type": "string", "description": "Bare domain (for CORS)." },
+        "bucketName":    { "type": "string", "description": "Backblaze B2 bucket. Defaults to <storagePrefix>-booth-inbox." },
+        "projectSlug":   { "type": "string", "description": "Output folder name. Defaults to <storagePrefix>-photobooth." },
+        "corsRuleName":  { "type": "string", "description": "Name of the B2 CORS rule. Defaults to <storagePrefix>Booth." },
+        "corsOrigins":   { "type": "array", "items": { "type": "string" }, "description": "Origins allowed to upload/view. Auto-built from the domains if omitted." }
+      }
+    }
+  }
+}

@@ -1,0 +1,27 @@
+# {{brand.name}} — Photo Booth
+# Static site + one serverless function that signs secure uploads to Backblaze B2.
+
+[build]
+  publish = "."
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# Friendly URLs -> functions
+[[redirects]]
+  from = "/api/sign-upload"
+  to = "/.netlify/functions/sign-upload"
+  status = 200
+[[redirects]]
+  from = "/api/gallery-list"
+  to = "/.netlify/functions/gallery-list"
+  status = 200
+[[redirects]]
+  from = "/api/gallery-action"
+  to = "/.netlify/functions/gallery-action"
+  status = 200
+[[redirects]]
+  from = "/api/set-cors"
+  to = "/.netlify/functions/set-cors"
+  status = 200

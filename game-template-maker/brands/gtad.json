@@ -1,0 +1,49 @@
+{
+  "_comment": "The original show. Feeding this config to make_booth.py reproduces the GTAD-PHOTOBOOTH site. Copy this file to start a new brand.",
+
+  "brand": {
+    "name": "Grand Theft After-Dark",
+    "short": "GTAD",
+    "lineOne": "Grand Theft",
+    "lineTwo": "After-Dark",
+    "kicker": "★ Presents ★",
+    "tagline": "Tap below to strike a pose.",
+    "followLabel": "Follow the movement",
+    "hashtag": "#GrandTheftAfterDark",
+    "galleryCta": "Add to GTAD Gallery",
+    "galleryDone": "Added to Gallery",
+    "logo": "gtad-logo.png"
+  },
+
+  "colors": {
+    "bg": "#0a0a0f",
+    "primary": "#ff1e6c",
+    "primaryBright": "#ff4f8b",
+    "secondary": "#16e0ff",
+    "accent": "#ffc23d",
+    "ink": "#f5f5fa",
+    "dim": "#9aa0b5"
+  },
+
+  "socials": {
+    "instagram": "https://instagram.com/grandtheftafterdark",
+    "facebook": "https://facebook.com/grandtheftafterdark",
+    "tiktok": "https://tiktok.com/@grandtheftafterdark",
+    "igHandle": "grandtheftafterdark"
+  },
+
+  "web": {
+    "storagePrefix": "gtad",
+    "netlifyName": "gtad",
+    "primaryDomain": "booth.grandtheftafterdark.com",
+    "rootDomain": "grandtheftafterdark.com",
+    "bucketName": "gtad-booth-inbox",
+    "projectSlug": "gtad-photobooth",
+    "corsRuleName": "gtadBooth",
+    "corsOrigins": [
+      "https://gtad.netlify.app",
+      "https://booth.grandtheftafterdark.com",
+      "https://grandtheftafterdark.com"
+    ]
+  }
+}
