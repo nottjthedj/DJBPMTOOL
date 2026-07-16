@@ -125,6 +125,13 @@
   .tbar.lead .lbl{color:var(--secondary);}
   .tbar .n{font-family:"IBM Plex Mono",Consolas,monospace;font-size:14px;color:var(--dim);}
   .tbar.lead .n{color:var(--secondary);}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:14px;}
+  .stat{border:1px solid var(--line);border-radius:14px;padding:14px;background:rgba(255,255,255,.02);}
+  .stat .num{font-family:"Bebas Neue",Oswald,Impact,sans-serif;font-size:34px;line-height:1;color:var(--secondary);
+    text-shadow:0 0 12px rgba({{colors.secondaryRgb}},.35);}
+  .stat .lab{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-top:6px;font-weight:800;}
+  .stat.wide{grid-column:1/-1;}
+  .stat.wide .num{color:var(--primary-bright);font-size:26px;text-shadow:0 0 12px rgba({{colors.primaryRgb}},.4);}
   .board{display:grid;gap:8px;}
   .brow{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:rgba(255,255,255,.02);}
   .brow .rank{font-family:"Bebas Neue",Oswald,Impact,sans-serif;font-size:22px;color:var(--dim);min-width:34px;text-align:center;}
@@ -203,6 +210,14 @@
 
   <!-- ===== BOARD ===== -->
   <div class="panel" id="board">
+    <div class="h">Tonight</div>
+    <div class="stats" id="stats">
+      <div class="stat"><div class="num" id="stMade">0</div><div class="lab">Made members</div></div>
+      <div class="stat"><div class="num" id="stPolls">0</div><div class="lab">Polls run</div></div>
+      <div class="stat"><div class="num" id="stVotes">0</div><div class="lab">Votes cast</div></div>
+      <div class="stat wide"><div class="num" id="stChapter">—</div><div class="lab" id="stHeat">Wanted level</div></div>
+    </div>
+
     <div class="h">Leaderboard</div>
     <div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;">
       <button class="btn ghost" id="refreshBoard">↻ Refresh</button>
@@ -497,12 +512,25 @@
       .then(function(r){ if(r.ok) loadBoard(); }).catch(function(){});
   }
 
-  // ---- leaderboard ----
+  // ---- leaderboard + night stats ----
   var boardTimer=null;
   function loadBoard(){
     fetch('/api/score?event='+encodeURIComponent(eventKey))
       .then(function(r){ return r.ok?r.json():null; })
       .then(function(d){ if(d) renderBoard(d.board||[], d.members||0); }).catch(function(){});
+    loadStats();
+  }
+  function loadStats(){
+    // local: tonight's chapter + wanted level (no fetch needed)
+    var ch=chapters.filter(function(x){return x.n===chapterNo;})[0]||{};
+    $('stChapter').textContent=ch.codename||('Night '+chapterNo);
+    $('stHeat').textContent='Wanted '+Array(heat+1).join('★')+'  ·  '+((ch.act||'').replace(/ —.*/,'')||'');
+    // remote: made members / polls / votes
+    fetch('/api/crew?event='+encodeURIComponent(eventKey))
+      .then(function(r){ return r.ok?r.json():null; })
+      .then(function(d){ if(!d) return;
+        $('stMade').textContent=d.made||0; $('stPolls').textContent=d.polls||0; $('stVotes').textContent=d.votes||0;
+      }).catch(function(){});
   }
   function renderBoard(board, members){
     var wrap=$('boardList');

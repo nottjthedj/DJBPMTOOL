@@ -343,7 +343,13 @@
     renderJob(); renderWanted(); renderMissions(); renderSocials(); wireBoothLink();
     $('intro').classList.remove('on'); $('crew').classList.add('on');
     window.scrollTo(0,0);
-    startLive(); loadScore();
+    startLive(); loadScore(); checkIn();
+  }
+  // register presence so the operator dashboard can count made members (fire-and-forget)
+  function checkIn(){
+    var member=localStorage.getItem(PREFIX+'_member'); if(!member) return;
+    fetch('/api/crew',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({event:eventKey,member:member})}).catch(function(){});
   }
 
   // ---------- live mode: follow the Handler's show state in real time ----------

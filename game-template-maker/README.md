@@ -206,6 +206,9 @@ config = the whole system, re-skinned. Expand infinitely.
   member's own rank + points. Same list-only trick: points live in the object key
   (`points/<event>/<poll>/<member>__<pts>`), so the whole board tallies in one list call.
   `POST /api/score` awards (operator token); `GET /api/score` returns the board.
+- **Operator dashboard.** The Board tab also shows tonight's numbers — **made members**,
+  **polls run**, **votes cast**, plus the current chapter and wanted level. Crew check in
+  when they get made (`POST /api/crew`); `GET /api/crew` returns the counts (one list each).
 
 ## Downloads (permanent)
 

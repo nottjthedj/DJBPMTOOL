@@ -37,3 +37,7 @@
   from = "/api/score"
   to = "/.netlify/functions/score"
   status = 200
+[[redirects]]
+  from = "/api/crew"
+  to = "/.netlify/functions/crew"
+  status = 200
