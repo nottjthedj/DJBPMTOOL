@@ -13,6 +13,9 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: write   # allow attaching built apps to a Release on v* tags
+
 jobs:
   build:
     strategy:
@@ -60,3 +63,21 @@ jobs:
             game-template-maker/dist/Booth Studio-macOS.zip
             game-template-maker/dist/Booth Studio
           if-no-files-found: warn
+
+      # On a v* tag, attach the built app to a GitHub Release. Release assets do
+      # not expire (unlike the 90-day Actions artifacts above). Each OS job adds
+      # its own file to the same release.
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Booth Studio ${{ github.ref_name }}
+          body: |
+            Booth Studio — the desktop app for the Game Template Maker.
+            Download for your platform below, then see game-template-maker/README.md.
+            First launch (unsigned): Windows → "More info → Run anyway"; macOS → right-click → Open.
+          files: |
+            game-template-maker/dist/Booth Studio.exe
+            game-template-maker/dist/Booth Studio-macOS.zip
+            game-template-maker/dist/Booth Studio
+          fail_on_unmatched_files: false

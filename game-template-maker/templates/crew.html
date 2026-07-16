@@ -189,6 +189,7 @@
         <div class="row"><span class="k">Member No.</span><span class="v big mono" id="memberNo">—</span></div>
         <div class="row"><span class="k">Made</span><span class="v mono" id="madeDate">—</span></div>
         <div class="row"><span class="k">Standing</span><span class="v" id="standing">Good</span></div>
+        <div class="row"><span class="k">Score</span><span class="v" id="crewScore">—</span></div>
       </div>
     </div>
 
@@ -342,7 +343,7 @@
     renderJob(); renderWanted(); renderMissions(); renderSocials(); wireBoothLink();
     $('intro').classList.remove('on'); $('crew').classList.add('on');
     window.scrollTo(0,0);
-    startLive();
+    startLive(); loadScore();
   }
 
   // ---------- live mode: follow the Handler's show state in real time ----------
@@ -391,6 +392,7 @@
       });
     }
     if(poll.open && (wasHidden||firstOpen)){ try{ box.scrollIntoView({behavior:'smooth',block:'center'}); }catch(e){} }
+    if(!poll.open){ setTimeout(loadScore, 800); }   // poll just closed → points were awarded
   }
   function castVote(poll, opt){
     localStorage.setItem(PREFIX+'_vote_'+poll.id, opt);
@@ -398,6 +400,18 @@
     var member=localStorage.getItem(PREFIX+'_member')||'anon';
     fetch('/api/vote',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({event:eventKey,poll:poll.id,option:opt,member:member})}).catch(function(){});
+  }
+
+  // ---------- your standing on the leaderboard ----------
+  function loadScore(){
+    var member=localStorage.getItem(PREFIX+'_member'); if(!member) return;
+    fetch('/api/score?event='+encodeURIComponent(eventKey))
+      .then(function(r){ return r.ok?r.json():null; })
+      .then(function(d){
+        if(!d) return; var b=d.board||[], rank=-1, pts=0;
+        for(var i=0;i<b.length;i++){ if(String(b[i].member)===String(member)){ rank=i+1; pts=b[i].points; break; } }
+        var el=$('crewScore'); if(el) el.textContent = pts>0 ? (pts+' pts'+(rank>0?('  ·  #'+rank):'')) : '—';
+      }).catch(function(){});
   }
   function pollLive(){
     fetch('/api/show-state?event='+encodeURIComponent(eventKey),{headers:{'Accept':'application/json'}})

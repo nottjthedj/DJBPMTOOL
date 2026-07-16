@@ -200,6 +200,19 @@ config = the whole system, re-skinned. Expand infinitely.
   member. A vote is a single tiny object whose *key* holds the option, so the whole room
   tallies with one list call — no per-vote reads. `POST /api/vote` casts; `GET /api/vote`
   tallies; no new config (same B2).
+- **Points + leaderboard.** Closing a poll awards points (everyone who voted earns a little,
+  whoever backed the winner earns more). The console's **Board** tab shows the live ranked
+  leaderboard (put it on the big screen between rounds), and each crew card shows the
+  member's own rank + points. Same list-only trick: points live in the object key
+  (`points/<event>/<poll>/<member>__<pts>`), so the whole board tallies in one list call.
+  `POST /api/score` awards (operator token); `GET /api/score` returns the board.
+
+## Downloads (permanent)
+
+Tagged releases attach the Booth Studio apps as **Release assets, which don't expire**
+(the per-run Actions artifacts are cleaned up after ~90 days). Cut one by pushing a
+`v*` tag (e.g. `git tag v1.0.0 && git push origin v1.0.0`); the build workflow publishes a
+GitHub Release with the Windows, macOS and Linux apps attached.
 - The booth's own backend (Backblaze B2 + NAS) is unchanged and documented in the
   generated `SETUP.md`.
 ```

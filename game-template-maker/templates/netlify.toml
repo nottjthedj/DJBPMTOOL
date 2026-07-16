@@ -33,3 +33,7 @@
   from = "/api/vote"
   to = "/.netlify/functions/vote"
   status = 200
+[[redirects]]
+  from = "/api/score"
+  to = "/.netlify/functions/score"
+  status = 200
