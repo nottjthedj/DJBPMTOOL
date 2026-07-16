@@ -4,6 +4,11 @@ name: Build Booth Studio (desktop app)
 # Download the results from this run's "Artifacts", or attach them to a v* release.
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Publish a permanent Release under this tag (e.g. v1.0.0). Blank = just build artifacts."
+        required: false
+        default: ""
   push:
     branches:
       - claude/game-template-maker-50sryl
@@ -68,10 +73,12 @@ jobs:
       # not expire (unlike the 90-day Actions artifacts above). Each OS job adds
       # its own file to the same release.
       - name: Attach to release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') || inputs.release_tag != ''
         uses: softprops/action-gh-release@v2
         with:
-          name: Booth Studio ${{ github.ref_name }}
+          tag_name: ${{ inputs.release_tag != '' && inputs.release_tag || github.ref_name }}
+          name: Booth Studio ${{ inputs.release_tag != '' && inputs.release_tag || github.ref_name }}
+          target_commitish: ${{ github.sha }}
           body: |
             Booth Studio — the desktop app for the Game Template Maker.
             Download for your platform below, then see game-template-maker/README.md.
